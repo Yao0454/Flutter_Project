@@ -1,3 +1,4 @@
+//这里是dart入口及文件夹
 import 'package:flutter/material.dart';
 
 void main() {
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 31, 193, 136)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 132, 1, 255)),
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
