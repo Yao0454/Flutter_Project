@@ -9,9 +9,6 @@ app = Flask(__name__)
 tiles_data = [
     {"title": "qwq", "Fuck": "这是描述信息 1", "extraInfo": "其他信息 1"},
     {"title": "0313物理类", "description": "这是描述信息 2", "extraInfo": "其他信息 2"},
-    {"title": "标题 3", "description": "这是描述信息 3", "extraInfo": "其他信息 3"},
-    {"title": "标题 4", "description": "这是描述信息 4", "extraInfo": "其他信息 4"},
-    {"title": "标题 5", "description": "这是描述信息 5", "extraInfo": "其他信息 5"},
 ]
 
 # 定义 API 路由（磁贴数据）

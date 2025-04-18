@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'excel_page.dart'; 
 import 'settings_page.dart';
 
@@ -54,13 +56,24 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<List<TileData>> fetchTileData() async {
-    final response = await http.get(Uri.parse('http://10.0.2.2:5001/api/tiles'));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final serverIp = prefs.getString('serverIp') ?? '10.0.2.2'; // 默认 IP 地址
+      const apiEndpoint = '/api/tiles'; // 固定的 API 端点
 
-    if (response.statusCode == 200) {
-      List<dynamic> data = json.decode(response.body);
-      return data.map((json) => TileData.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load data');
+      final url = Uri.parse('http://$serverIp:5001$apiEndpoint');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((json) => TileData.fromJson(json)).toList();
+      } else {
+        throw Exception('服务端返回错误状态码: ${response.statusCode}');
+      }
+    } on SocketException catch (e) {
+      throw Exception('无法连接到服务端，请检查 IP 地址是否正确: $e');
+    } catch (e) {
+      throw Exception('发生未知错误: $e');
     }
   }
 
@@ -68,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _futureTileData = fetchTileData();
     });
-    await _futureTileData; // 等待数据加载完成
+    //await _futureTileData; // 等待数据加载完成
   }
 
   @override
@@ -85,9 +98,43 @@ class _MyHomePageState extends State<MyHomePage> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             } else if (snapshot.hasError) {
-              return Center(child: Text('加载失败: ${snapshot.error}'));
+              // 返回支持刷新的错误提示视图
+              return ListView(
+                children: [
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 100),
+                        const Icon(Icons.error, color: Colors.red, size: 50),
+                        const SizedBox(height: 16),
+                        Text(
+                          '加载失败: ${snapshot.error}',
+                          style: const TextStyle(color: Colors.red, fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          '请检查网络连接或服务器地址，然后下拉刷新重试。',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text('没有数据'));
+              // 返回支持刷新的空数据提示视图
+              return ListView(
+                children: const [
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 100),
+                      child: Text('没有数据', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                ],
+              );
             } else {
               final tiles = snapshot.data!;
               return ListView.builder(
@@ -96,14 +143,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 itemBuilder: (context, index) {
                   final tile = tiles[index];
                   return GestureDetector(
-                    onTap: () {
-                      // 跳转到 Excel 页面
+                    onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      final serverIp = prefs.getString('serverIp') ?? '10.0.2.2'; // 默认 IP 地址
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => ExcelPage(
                             title: tile.title,
-                            excelUrl: 'http://10.0.2.2:5001/api/excel/stream/${Uri.encodeComponent(tile.title)}',
+                            excelUrl: 'http://$serverIp:5001/api/excel/stream/${Uri.encodeComponent(tile.title)}',
                           ),
                         ),
                       );
@@ -153,13 +201,11 @@ class _MyHomePageState extends State<MyHomePage> {
           },
         ),
       ),
-      // 添加右下角的圆形设置按钮
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // 跳转到设置页面
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => SettingsPage()),
+            MaterialPageRoute(builder: (context) => const SettingsPage()),
           );
         },
         child: const Icon(Icons.settings),
