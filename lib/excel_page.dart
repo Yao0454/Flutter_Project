@@ -65,7 +65,7 @@ class _ExcelPageState extends State<ExcelPage> {
       }
     } catch (e) {
       print('Error fetching Excel data: $e');
-      rethrow;
+    rethrow;
     }
   }
 

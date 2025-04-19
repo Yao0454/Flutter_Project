@@ -25,38 +25,15 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _saveSettings() async {
-    final ipRegex = RegExp(
-        r'^((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$');
-    if (!ipRegex.hasMatch(_serverIpController.text)) {
-      // 显示错误对话框
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('错误'),
-          content: const Text('请输入有效的 IP 地址'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('serverIp', _serverIpController.text);
 
     // 显示保存成功的提示
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('设置已保存'),
-        backgroundColor: Colors.green,
-      ),
+      const SnackBar(content: Text('设置已保存')),
     );
 
-    Navigator.pop(context);
+    Navigator.pop(context); // 返回上一页
   }
 
   @override
@@ -77,24 +54,21 @@ class _SettingsPageState extends State<SettingsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '服务端设置',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              '服务器地址',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             TextField(
               controller: _serverIpController,
               decoration: const InputDecoration(
-                labelText: '服务端 IP 地址',
-                hintText: '例如：10.0.2.2',
                 border: OutlineInputBorder(),
+                hintText: '请输入服务器域名或 IP 地址',
               ),
             ),
-            const SizedBox(height: 32),
-            Center(
-              child: ElevatedButton(
-                onPressed: _saveSettings,
-                child: const Text('保存设置'),
-              ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _saveSettings,
+              child: const Text('保存'),
             ),
           ],
         ),

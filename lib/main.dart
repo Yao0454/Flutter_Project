@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'excel_page.dart'; 
 import 'settings_page.dart';
 
@@ -52,7 +53,18 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    _requestPermissions();
     _futureTileData = fetchTileData();
+  }
+
+  Future<void> _requestPermissions() async {
+    if (await Permission.storage.isDenied) {
+      final status = await Permission.storage.request();
+      if (status.isPermanentlyDenied) {
+        // 引导用户到设置页面
+        openAppSettings();
+      }
+    }
   }
 
   Future<List<TileData>> fetchTileData() async {
@@ -71,7 +83,7 @@ class _MyHomePageState extends State<MyHomePage> {
         throw Exception('服务端返回错误状态码: ${response.statusCode}');
       }
     } on SocketException catch (e) {
-      throw Exception('无法连接到服务端，请检查 IP 地址是否正确: $e');
+      throw Exception('无法连接到服务端，请检查 IP 地址或域名是否正确: $e');
     } catch (e) {
       throw Exception('发生未知错误: $e');
     }

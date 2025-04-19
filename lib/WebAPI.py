@@ -7,8 +7,8 @@ app = Flask(__name__)
 
 # 模拟磁贴数据（保持不变）
 tiles_data = [
-    {"title": "qwq", "Fuck": "这是描述信息 1", "extraInfo": "其他信息 1"},
-    {"title": "0313物理类", "description": "这是描述信息 2", "extraInfo": "其他信息 2"},
+    {"title": "0415物理类", "description": "这是湖北省四月调研考试物理类成绩", "extraInfo": "请文明查分"},
+    {"title": "0313物理类", "description": "这是湖北省圆创联盟三月考试物理类成绩", "extraInfo": "请文明查分"},
 ]
 
 # 定义 API 路由（磁贴数据）
