@@ -6,6 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'excel_page.dart'; 
 import 'settings_page.dart';
+import 'profile_page.dart';
+import 'login_page.dart';
+import 'change_password_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,21 +22,19 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 0, 0, 0),
-          primary: const Color.fromARGB(255, 0, 0, 0), // 主色
-          onPrimary: const Color.fromARGB(255, 54, 47, 47), // AppBar标题颜色
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color.fromARGB(255, 218, 91, 91), // AppBar背景色
-          titleTextStyle: TextStyle(
-            color: Colors.white, // 标题颜色
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: '成绩查询'),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => LoginPage(fetchUsernames: fetchUsernames),
+        '/change_password': (context) => ChangePasswordPage(
+              username: ModalRoute.of(context)!.settings.arguments as String,
+            ),
+        '/home': (context) => const MyHomePage(title: '成绩查询'),
+        '/profile': (context) => ProfilePage(
+              username: ModalRoute.of(context)!.settings.arguments as String,
+            ),
+      },
     );
   }
 }
@@ -48,7 +49,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  int _currentIndex = 0; // 当前选中的页面索引
   late Future<List<TileData>> _futureTileData;
+  List<String> _usernames = [];
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -61,7 +65,6 @@ class _MyHomePageState extends State<MyHomePage> {
     if (await Permission.storage.isDenied) {
       final status = await Permission.storage.request();
       if (status.isPermanentlyDenied) {
-        // 引导用户到设置页面
         openAppSettings();
       }
     }
@@ -93,19 +96,104 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _futureTileData = fetchTileData();
     });
-    //await _futureTileData; // 等待数据加载完成
   }
+
+  Future<void> _refreshUsernames() async {
+    try {
+      final usernames = await fetchUsernames();
+      setState(() {
+        _usernames = usernames;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = '无法刷新用户名列表，请检查网络连接。';
+      });
+    }
+  }
+
+  Future<String> _getCurrentUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('currentUsername') ?? '未知用户';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> _pages = [
+      HomePage(
+        futureTileData: _futureTileData,
+        refreshData: _refreshData,
+        getCurrentUsername: _getCurrentUsername,
+      ),
+      ProfilePage(
+        username: ModalRoute.of(context)!.settings.arguments as String,
+      ),  // 个人页面
+      const SettingsPage(), // 设置页面
+    ];
+
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: '主页',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: '个人',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: '设置',
+          ),
+          
+        ],
+      ),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  final Future<List<TileData>> futureTileData;
+  final Future<void> Function() refreshData;
+  final Future<String> Function() getCurrentUsername;
+
+  const HomePage({super.key, required this.futureTileData, required this.refreshData, required this.getCurrentUsername});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: const Text('主页'), // 标题栏内容
+        centerTitle: true, // 标题居中
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              final username = prefs.getString('currentUsername') ?? '未知用户';
+              Navigator.pushNamed(
+                context,
+                '/profile',
+                arguments: username,
+              );
+            },
+          ),
+        ],
       ),
       body: RefreshIndicator(
-        onRefresh: _refreshData, // 下滑刷新时调用
+        onRefresh: refreshData, // 下滑刷新时调用
         child: FutureBuilder<List<TileData>>(
-          future: _futureTileData,
+          future: futureTileData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -213,15 +301,6 @@ class _MyHomePageState extends State<MyHomePage> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SettingsPage()),
-          );
-        },
-        child: const Icon(Icons.settings),
-      ),
     );
   }
 }
@@ -240,5 +319,17 @@ class TileData {
       description: json['description'] ?? "",
       extraInfo: json['extraInfo'] ?? "",
     );
+  }
+}
+
+Future<List<String>> fetchUsernames() async {
+  final url = Uri.parse('http://www.fengqwq.cn:5001/api/usernames');
+  print('Fetching usernames from: $url'); // 打印请求的 URL
+  final response = await http.get(url);
+  print('Response status: ${response.statusCode}'); // 打印响应状态码
+  if (response.statusCode == 200) {
+    return List<String>.from(json.decode(response.body)); // 返回用户名列表
+  } else {
+    throw Exception('无法加载用户名');
   }
 }

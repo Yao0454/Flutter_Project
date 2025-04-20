@@ -97,7 +97,7 @@ class _ExcelPageState extends State<ExcelPage> {
     final int rowsPerPage = (availableHeight / rowHeight).floor(); // 动态计算每页行数
 
     final columns = _filteredRows.isNotEmpty
-        ? _filteredRows.first.keys.map((key) => key.toString()).toList() as List<String>
+        ? _filteredRows.first.keys.map((key) => key.toString()).toList()
         : <String>[];
     final startIndex = _currentPage * rowsPerPage;
     final endIndex = (_currentPage + 1) * rowsPerPage;
